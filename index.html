@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>테오네 마스터 시간표 트래커</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f0f13;
+    --bg2: #17171e;
+    --bg3: #1e1e27;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #f0effe;
+    --text2: #9490b8;
+    --text3: #5e5a7e;
+    --purple: #9b8ef5;
+    --purple2: #7f77dd;
+    --purple-bg: rgba(155,142,245,0.12);
+    --green: #34d99b;
+    --green-bg: rgba(52,217,155,0.1);
+    --orange: #f5834e;
+    --orange-bg: rgba(245,131,78,0.1);
+    --amber: #f5c542;
+    --amber-bg: rgba(245,197,66,0.1);
+    --teal: #38bdf8;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --radius-pill: 100px;
+  }
+
+  html { background: var(--bg); color: var(--text); font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; font-size: 15px; line-height: 1.5; }
+
+  body { min-height: 100vh; padding: 24px 16px 60px; }
+
+  .tracker { max-width: 860px; margin: 0 auto; }
+
+  /* Header */
+  .header { margin-bottom: 24px; display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  .header-title { font-size: 22px; font-weight: 700; letter-spacing: -0.03em; }
+  .header-title span { color: var(--purple); }
+  .header-sub { font-size: 12px; color: var(--text3); }
+
+  /* Dashboard */
+  .dashboard { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; }
+  .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  .metric { background: var(--bg3); border-radius: var(--radius-sm); padding: 14px 16px; border: 0.5px solid var(--border); }
+  .metric-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px; }
+  .metric-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+  .metric-value { font-size: 28px; font-weight: 700; letter-spacing: -0.04em; }
+  .metric-sub { font-size: 12px; color: var(--text3); }
+  .metric-value.purple { color: var(--purple); }
+  .metric-value.orange { color: var(--orange); }
+  .bar-wrap { height: 5px; background: rgba(255,255,255,0.07); border-radius: 100px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 100px; transition: width 0.5s cubic-bezier(0.4,0,0.2,1); }
+  .bar-purple { background: linear-gradient(90deg, var(--purple2), var(--purple)); }
+  .bar-orange { background: linear-gradient(90deg, var(--orange), var(--amber)); }
+
+  /* Day dots */
+  .day-dots { display: flex; gap: 8px; flex-wrap: wrap; }
+  .day-dot { width: 36px; height: 36px; border-radius: 50%; border: 0.5px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: var(--text2); cursor: pointer; transition: all 0.15s; }
+  .day-dot:hover { border-color: var(--purple2); color: var(--purple); }
+  .day-dot.today { border-color: var(--orange); color: var(--orange); }
+  .day-dot.complete { background: var(--green-bg); border-color: var(--green); color: var(--green); }
+  .day-dot.active { background: var(--purple-bg); border-color: var(--purple); color: var(--purple); }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+  .tab { padding: 7px 16px; border-radius: var(--radius-pill); border: 0.5px solid var(--border); background: transparent; color: var(--text2); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; font-family: inherit; }
+  .tab:hover { border-color: var(--border2); color: var(--text); }
+  .tab.today { border-color: rgba(245,131,78,0.4); color: var(--orange); }
+  .tab.active { background: var(--purple-bg); border-color: var(--purple2); color: var(--purple); }
+  .tab.today.active { background: var(--orange-bg); border-color: var(--orange); color: var(--orange); }
+
+  /* Section label */
+  .section-label { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; margin: 16px 0 8px; padding-left: 2px; }
+
+  /* Task cards */
+  .tasks { display: flex; flex-direction: column; gap: 7px; }
+  .task-card { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 14px 16px; display: flex; align-items: flex-start; gap: 12px; cursor: pointer; transition: all 0.2s; }
+  .task-card:hover { border-color: var(--border2); background: var(--bg3); }
+  .task-card.done { opacity: 0.38; }
+  .task-card.done .task-name { text-decoration: line-through; text-decoration-color: var(--text3); }
+
+  /* Checkbox */
+  .cb { width: 20px; height: 20px; flex-shrink: 0; margin-top: 2px; border-radius: 6px; border: 1.5px solid var(--border2); background: transparent; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+  .cb.checked { background: var(--purple2); border-color: var(--purple2); }
+  .cb svg { display: none; }
+  .cb.checked svg { display: block; }
+
+  /* Task body */
+  .task-body { flex: 1; min-width: 0; }
+  .task-time { font-size: 11px; color: var(--text3); font-variant-numeric: tabular-nums; margin-bottom: 3px; letter-spacing: 0.02em; }
+  .task-name { font-size: 14px; font-weight: 500; color: var(--text); line-height: 1.35; }
+  .task-meta { display: flex; align-items: center; gap: 6px; margin-top: 5px; flex-wrap: wrap; }
+  .task-note { font-size: 12px; color: var(--text3); }
+  .tag { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: var(--radius-pill); letter-spacing: 0.04em; }
+  .tag-fixed { background: var(--purple-bg); color: var(--purple); }
+  .tag-var { background: var(--green-bg); color: var(--green); }
+  .tag-special { background: var(--orange-bg); color: var(--orange); }
+  .tag-yoga { background: var(--amber-bg); color: var(--amber); }
+
+  /* Reset */
+  .reset-btn { margin-top: 20px; padding: 7px 16px; border-radius: var(--radius-pill); border: 0.5px solid var(--border); background: transparent; color: var(--text3); font-size: 12px; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+  .reset-btn:hover { border-color: var(--border2); color: var(--text2); }
+
+  /* Confetti overlay */
+  .confetti-overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 9999; background: rgba(0,0,0,0.5); pointer-events: none; opacity: 0; transition: opacity 0.3s; }
+  .confetti-overlay.show { opacity: 1; pointer-events: auto; }
+  .confetti-box { background: var(--bg2); border: 0.5px solid var(--purple2); border-radius: var(--radius); padding: 28px 36px; text-align: center; transform: scale(0.85); transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1); }
+  .confetti-overlay.show .confetti-box { transform: scale(1); }
+  .confetti-icon { font-size: 40px; margin-bottom: 10px; }
+  .confetti-title { font-size: 18px; font-weight: 700; color: var(--purple); margin-bottom: 6px; }
+  .confetti-msg { font-size: 13px; color: var(--text2); }
+
+  @media (max-width: 480px) {
+    .dash-grid { grid-template-columns: 1fr; }
+    .metric-value { font-size: 22px; }
+    body { padding: 16px 12px 60px; }
+  }
+</style>
+</head>
+<body>
+<div class="tracker">
+  <div class="header">
+    <div>
+      <div class="header-title">테오네 <span>마스터 시간표</span></div>
+      <div class="header-sub">1인 기업가 주간 업무 트래커</div>
+    </div>
+    <button class="reset-btn" onclick="resetAll()">전체 초기화</button>
+  </div>
+
+  <div class="dashboard">
+    <div class="dash-grid">
+      <div class="metric">
+        <div class="metric-label">이번 주 전체 성공률</div>
+        <div class="metric-row">
+          <div class="metric-value purple" id="weekly-pct">0%</div>
+          <div class="metric-sub" id="weekly-sub">0 / 0</div>
+        </div>
+        <div class="bar-wrap"><div class="bar-fill bar-purple" id="weekly-bar" style="width:0%"></div></div>
+      </div>
+      <div class="metric">
+        <div class="metric-label" id="today-label">오늘 성공률</div>
+        <div class="metric-row">
+          <div class="metric-value orange" id="today-pct">0%</div>
+          <div class="metric-sub" id="today-sub">0 / 0</div>
+        </div>
+        <div class="bar-wrap"><div class="bar-fill bar-orange" id="today-bar" style="width:0%"></div></div>
+      </div>
+    </div>
+    <div class="day-dots" id="day-dots"></div>
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+  <div id="task-area"></div>
+</div>
+
+<div class="confetti-overlay" id="confetti">
+  <div class="confetti-box">
+    <div class="confetti-icon" id="c-icon">🎉</div>
+    <div class="confetti-title" id="c-title">완료!</div>
+    <div class="confetti-msg" id="c-msg">대단해요!</div>
+  </div>
+</div>
+
+<script>
+const DAYS = ['월','화','수','목','금'];
+const TODAY_IDX = (()=>{ const d = new Date().getDay(); return (d >= 1 && d <= 5) ? d - 1 : 0; })();
+
+const FIXED = [
+  { time:'08:00–09:00', name:'개인 블로그 작성', note:'매일 브랜딩', tag:'fixed', num:9 },
+  { time:'09:00–10:30', name:'단기 기획: 글로벌 리걸옵스', note:'초집중 아웃풋', tag:'fixed', num:1 },
+  { time:'10:30–11:30', name:'장기 학습: AI 무역송금', note:'인풋 축적', tag:'fixed', num:2 },
+  { time:'11:30–13:30', name:'점심 미팅 및 네트워크', note:'또는 자투리 쇼핑몰/AI 빌딩', tag:'fixed', num:5 },
+];
+
+const VAR = [
+  [
+    { time:'13:30–15:00', name:'박람회 F/U 예약 작업', note:'화요 발송 세팅', tag:'var', num:1 },
+    { time:'15:00–16:00', name:'부동산 일반 (공인중개사 1차)', note:'자격증 공부', tag:'var', num:7 },
+  ],
+  [
+    { time:'13:30–15:00', name:'출판 원고 집중 집필', note:'원고 집중 집필', tag:'var', num:8 },
+    { time:'15:00–16:00', name:'부동산 일반 (공인중개사 2차)', note:'자격증 공부', tag:'var', num:7 },
+    { time:'저녁', name:'요가 (Night)', note:'화요일 저녁 요가', tag:'yoga', num:null },
+  ],
+  [
+    { time:'13:30–15:00', name:'출판 원고 집중 집필', note:'원고 집중 집필', tag:'var', num:8 },
+    { time:'15:00–16:00', name:'부동산 일반 기출 및 오답', note:'기출 및 오답', tag:'var', num:7 },
+  ],
+  [
+    { time:'08:30–09:30', name:'요가 (AM)', note:'목요일 오전 요가', tag:'yoga', num:null },
+    { time:'10:00–12:00', name:'경매 수업 물건분석 실전', note:'물건분석 실전 직강', tag:'special', num:6 },
+    { time:'13:30–15:00', name:'경매 심화 복습', note:'오전 수업 내용 복습', tag:'special', num:6 },
+    { time:'15:00–16:00', name:'온비드 검색', note:'실전 매물 스캔', tag:'special', num:6 },
+  ],
+  [
+    { time:'13:30–14:30', name:'출판 원고 집중 집필', note:'원고 집중 집필', tag:'var', num:8 },
+    { time:'14:30–16:00', name:'정부 지원 F/U + 법인 운영 마감', note:'[10] + [3] 복합 업무', tag:'var', num:10 },
+    { time:'저녁', name:'요가 (Night)', note:'금요일 저녁 요가', tag:'yoga', num:null },
+  ],
+];
+
+function getSchedule(di) {
+  if (di === 3) {
+    return [VAR[3][0], ...FIXED, ...VAR[3].slice(1)];
+  }
+  return [...FIXED, ...VAR[di]];
+}
+
+function sk(di, ti) { return `theo_d${di}_t${ti}`; }
+function getS(di, ti) { try { return localStorage.getItem(sk(di, ti)) === '1'; } catch { return false; } }
+function setS(di, ti, v) { try { localStorage.setItem(sk(di, ti), v ? '1' : '0'); } catch {} }
+
+function countFor(di) {
+  const tasks = getSchedule(di);
+  let done = 0;
+  tasks.forEach((_, i) => { if (getS(di, i)) done++; });
+  return { done, total: tasks.length };
+}
+
+let activeDay = TODAY_IDX;
+
+function updateDashboard() {
+  let wDone = 0, wTotal = 0;
+  DAYS.forEach((_, di) => { const c = countFor(di); wDone += c.done; wTotal += c.total; });
+  const wpct = wTotal ? Math.round(wDone / wTotal * 100) : 0;
+  document.getElementById('weekly-pct').textContent = wpct + '%';
+  document.getElementById('weekly-sub').textContent = wDone + ' / ' + wTotal;
+  document.getElementById('weekly-bar').style.width = wpct + '%';
+
+  const { done: td, total: tt } = countFor(TODAY_IDX);
+  const tpct = tt ? Math.round(td / tt * 100) : 0;
+  document.getElementById('today-label').textContent = DAYS[TODAY_IDX] + '요일 오늘';
+  document.getElementById('today-pct').textContent = tpct + '%';
+  document.getElementById('today-sub').textContent = td + ' / ' + tt;
+  document.getElementById('today-bar').style.width = tpct + '%';
+
+  const dotsEl = document.getElementById('day-dots');
+  dotsEl.innerHTML = '';
+  DAYS.forEach((d, di) => {
+    const { done, total } = countFor(di);
+    const pct = total ? Math.round(done / total * 100) : 0;
+    const dot = document.createElement('div');
+    dot.className = 'day-dot' +
+      (di === TODAY_IDX ? ' today' : '') +
+      (pct === 100 ? ' complete' : '') +
+      (di === activeDay ? ' active' : '');
+    dot.textContent = d;
+    dot.title = DAYS[di] + '요일 ' + pct + '%';
+    dot.onclick = () => { activeDay = di; renderTabs(); renderTasks(); updateDashboard(); };
+    dotsEl.appendChild(dot);
+  });
+}
+
+function renderTabs() {
+  const c = document.getElementById('tabs');
+  c.innerHTML = '';
+  DAYS.forEach((d, i) => {
+    const btn = document.createElement('button');
+    const isToday = i === TODAY_IDX;
+    btn.className = 'tab' + (isToday ? ' today' : '') + (i === activeDay ? ' active' : '');
+    btn.textContent = d + '요일' + (isToday ? ' (오늘)' : '');
+    btn.onclick = () => { activeDay = i; renderTabs(); renderTasks(); updateDashboard(); };
+    c.appendChild(btn);
+  });
+}
+
+function tagHTML(tag) {
+  const map = { fixed: ['tag-fixed', '고정'], var: ['tag-var', '가변'], special: ['tag-special', '특수'], yoga: ['tag-yoga', '요가'] };
+  const [cls, label] = map[tag] || ['tag-fixed', tag];
+  return `<span class="tag ${cls}">${label}</span>`;
+}
+
+function renderTasks() {
+  const area = document.getElementById('task-area');
+  area.innerHTML = '';
+  const tasks = getSchedule(activeDay);
+  const amEnd = activeDay === 3 ? FIXED.length + 1 : FIXED.length;
+
+  tasks.forEach((task, i) => {
+    if (i === 0) {
+      const lbl = document.createElement('div');
+      lbl.className = 'section-label';
+      lbl.textContent = activeDay === 3 ? '오전 특별 루틴' : '오전 고정 루틴';
+      area.appendChild(lbl);
+    }
+    if (i === amEnd) {
+      const lbl = document.createElement('div');
+      lbl.className = 'section-label';
+      lbl.textContent = '오후 / 저녁 루틴';
+      area.appendChild(lbl);
+    }
+
+    const done = getS(activeDay, i);
+    const card = document.createElement('div');
+    card.className = 'task-card' + (done ? ' done' : '');
+    card.innerHTML = `
+      <div class="cb${done ? ' checked' : ''}">
+        <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
+          <path d="M1 5l3.5 3.5L11 1" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="task-body">
+        <div class="task-time">${task.time}</div>
+        <div class="task-name">${task.num ? `[${task.num}] ` : ''}${task.name}</div>
+        <div class="task-meta">
+          ${tagHTML(task.tag)}
+          <span class="task-note">${task.note}</span>
+        </div>
+      </div>`;
+    card.onclick = () => toggleTask(activeDay, i);
+    area.appendChild(card);
+  });
+}
+
+let confTimer = null;
+function showConfetti(icon, title, msg) {
+  document.getElementById('c-icon').textContent = icon;
+  document.getElementById('c-title').textContent = title;
+  document.getElementById('c-msg').textContent = msg;
+  const el = document.getElementById('confetti');
+  el.classList.add('show');
+  el.onclick = () => el.classList.remove('show');
+  if (confTimer) clearTimeout(confTimer);
+  confTimer = setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+function toggleTask(di, ti) {
+  const cur = getS(di, ti);
+  setS(di, ti, !cur);
+  const { done, total } = countFor(di);
+  if (!cur && done === total && total > 0) {
+    const wDone = DAYS.reduce((s, _, d) => s + countFor(d).done, 0);
+    const wTotal = DAYS.reduce((s, _, d) => s + countFor(d).total, 0);
+    if (wDone === wTotal) {
+      setTimeout(() => showConfetti('🏆', '이번 주 완벽 달성!', '모든 업무를 완료했어요. 정말 대단해요!'), 300);
+    } else if (di === TODAY_IDX) {
+      setTimeout(() => showConfetti('🎉', '오늘 하루 완료!', DAYS[di] + '요일 모든 업무를 끝냈어요!'), 300);
+    }
+  }
+  updateDashboard();
+  renderTabs();
+  renderTasks();
+}
+
+function resetAll() {
+  if (!confirm('모든 체크 기록을 초기화할까요?')) return;
+  try {
+    DAYS.forEach((_, di) => getSchedule(di).forEach((_, ti) => localStorage.removeItem(sk(di, ti))));
+  } catch {}
+  updateDashboard(); renderTabs(); renderTasks();
+}
+
+renderTabs();
+renderTasks();
+updateDashboard();
+</script>
+</body>
+</html>
