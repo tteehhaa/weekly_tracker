@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -193,9 +194,11 @@ const VAR = [
   ],
   [
     { time:'08:30–09:30', name:'요가 (AM)', note:'목요일 오전 요가', tag:'yoga', num:null },
-    { time:'10:00–12:00', name:'경매 수업 물건분석 실전', note:'물건분석 실전 직강', tag:'special', num:6 },
-    { time:'13:30–15:00', name:'경매 심화 복습', note:'오전 수업 내용 복습', tag:'special', num:6 },
-    { time:'15:00–16:00', name:'온비드 검색', note:'실전 매물 스캔', tag:'special', num:6 },
+    { time:'09:30–10:00', name:'개인 블로그 작성', note:'매일 브랜딩', tag:'fixed', num:9 },
+    { time:'10:00–12:00', name:'경매 수업 (물건분석 실전 직강)', note:'물건분석 실전 직강', tag:'special', num:6 },
+    { time:'12:00–13:30', name:'점심 미팅 및 네트워크', note:'또는 자투리 쇼핑몰/AI 빌딩', tag:'fixed', num:5 },
+    { time:'13:30–15:00', name:'경매 심화 (오전 수업 내용 복습)', note:'오전 수업 내용 복습', tag:'special', num:6 },
+    { time:'15:00–16:00', name:'온비드 검색 (실전 매물 스캔)', note:'실전 매물 스캔', tag:'special', num:6 },
   ],
   [
     { time:'13:30–14:30', name:'출판 원고 집중 집필', note:'원고 집중 집필', tag:'var', num:8 },
@@ -206,7 +209,7 @@ const VAR = [
 
 function getSchedule(di) {
   if (di === 3) {
-    return [VAR[3][0], ...FIXED, ...VAR[3].slice(1)];
+    return [...VAR[3]];
   }
   return [...FIXED, ...VAR[di]];
 }
@@ -279,16 +282,15 @@ function renderTasks() {
   const area = document.getElementById('task-area');
   area.innerHTML = '';
   const tasks = getSchedule(activeDay);
-  const amEnd = activeDay === 3 ? FIXED.length + 1 : FIXED.length;
 
   tasks.forEach((task, i) => {
     if (i === 0) {
       const lbl = document.createElement('div');
       lbl.className = 'section-label';
-      lbl.textContent = activeDay === 3 ? '오전 특별 루틴' : '오전 고정 루틴';
+      lbl.textContent = activeDay === 3 ? '목요일 특수 일정 (고정루틴 제외)' : '오전 고정 루틴';
       area.appendChild(lbl);
     }
-    if (i === amEnd) {
+    if (activeDay !== 3 && i === FIXED.length) {
       const lbl = document.createElement('div');
       lbl.className = 'section-label';
       lbl.textContent = '오후 / 저녁 루틴';
